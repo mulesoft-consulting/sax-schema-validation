@@ -9,6 +9,7 @@ import javax.xml.parsers.SAXParserFactory;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 
+import org.apache.commons.io.IOUtils;
 import org.mule.api.MuleMessage;
 import org.mule.api.lifecycle.Initialisable;
 import org.mule.api.lifecycle.InitialisationException;
@@ -60,25 +61,32 @@ public class SAXSchemaValidationFilter implements Filter, Initialisable {
 	public boolean accept(MuleMessage message) {
 		Object payload = message.getPayload();
 		InputSource source = null;
-
-		if (payload instanceof String) {
-			source = new InputSource(new ByteArrayInputStream(((String) payload).getBytes()));
-		} else if (payload instanceof byte[]) {
-			source = new InputSource(new ByteArrayInputStream((byte[]) payload));
-		} else if (payload instanceof InputStream) {
-			source = new InputSource((InputStream) payload);
-		} else {
-			message.setProperty("schemaValidationError", "Payload is not of type: " + String.class.getName() + ", byte[] or " + InputStream.class.getName(), PropertyScope.INVOCATION);
-			return false;
-		}
+		InputStream stream = null;
 
 		try {
+			if (payload instanceof String) {
+				stream = new ByteArrayInputStream(((String) payload).getBytes());			
+			} else if (payload instanceof byte[]) {
+				stream = new ByteArrayInputStream((byte[]) payload);
+			} else if (payload instanceof InputStream) {
+				stream = (InputStream) payload;
+			} else {
+				message.setProperty("schemaValidationError", "Payload is not of type: " + String.class.getName() + ", byte[] or " + InputStream.class.getName(), PropertyScope.INVOCATION);
+				return false;
+			}
+
+			source = new InputSource(stream);
 			reader.parse(source);
+
 		} catch (Exception e) {
 			message.setProperty("schemaValidationError", e.getMessage(), PropertyScope.INVOCATION);
 			return false;
+		} finally {
+			if (stream != null) {
+				IOUtils.closeQuietly(stream);
+			}
 		}
-		
+
 		return true;
 	}
 
