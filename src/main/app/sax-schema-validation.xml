@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd">
+
+    <spring:beans>
+        <spring:bean id="saxSchemaValidationDefaultErrorHandler" name="SAXSchemaValidationDefaultErrorHandlerBean" class="com.mulesoft.example.filter.SAXSchemaValidationDefaultErrorHandler"/>
+    </spring:beans>
+
+    <flow name="schema-validationFlow">
+        <message-filter throwOnUnaccepted="true" doc:name="Validate XML">
+            <custom-filter class="com.mulesoft.example.filter.SAXSchemaValidationFilter">
+                <spring:property name="errorHandler" ref="saxSchemaValidationDefaultErrorHandler"/>
+                <spring:property name="schemaLocation" value="xsd/test_schema.xsd"/>
+            </custom-filter>
+        </message-filter>
+        <choice-exception-strategy doc:name="Choice Exception Strategy">
+            <catch-exception-strategy when="#[exception.causedBy(org.mule.api.routing.filter.FilterUnacceptedException)]" doc:name="Catch Exception Strategy">
+                <set-payload value="#['Invalid XML: ' + flowVars['schemaValidationError']]" doc:name="Set Validation Error Payload"/>
+            </catch-exception-strategy>
+            <catch-exception-strategy doc:name="Catch Exception Strategy">
+                <set-payload value="#[ 'Unknown error' ]" doc:name="Set Error"/>
+            </catch-exception-strategy>
+        </choice-exception-strategy>
+    </flow>
+    
+</mule>
