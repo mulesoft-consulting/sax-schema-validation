@@ -61,3 +61,5 @@ mule-project.xml
 # IntelliJ-specific #
 # ----------------- #
 /activemq-data
+
+.DS_Store
